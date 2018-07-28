@@ -152,8 +152,8 @@ def centerItem(robot, item, bounds, bounding_item):
 	offset2 = bounding_item[1] - upper_bound
 
 	offset = (offset1 + offset2) / 2.0
-	offsetTransform(item, offset)
-	offsetTransform(robot, offset)
+	# offsetTransform(item, offset)
+	# offsetTransform(robot, offset)
 	return lower_bound, upper_bound, offset
 
 def getManuallyLabelledPoints():

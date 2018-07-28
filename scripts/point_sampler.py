@@ -1,6 +1,6 @@
 from pyntcloud import PyntCloud
 import numpy
-
+import pdb
 
 def getPointCloudFromMesh(filename, flag):
     cloud = PyntCloud.from_file(filename + ".ply")
@@ -25,12 +25,16 @@ def getPointCloudFromMesh(filename, flag):
             kd_tree_list.append(points_array[i][1] /1000.0) 
             kd_tree_list.append(points_array[i][2] /1000.0)
             kd_tree_list.append(points_array[i][3] /1000.0)
+            kd_tree_list.append(points_array[i][4] /1000.0)
+            kd_tree_list.append(points_array[i][5] /1000.0)
+            kd_tree_list.append(points_array[i][6] /1000.0)
 
     if flag == 'hand':
         numpy.savetxt(filename + '.out', point_list, delimiter=',')
         new_cloud = PyntCloud(points)
         new_cloud.to_file(filename + '.npz')
     else:
+        print('in here')
         numpy.savetxt(filename + '.out', kd_tree_list, delimiter=',')
 
-getPointCloudFromMesh('NewSprayBottle', 'NewSprayBottle')
+getPointCloudFromMesh('SprayBottle', 'SprayBottle_w_norm')
