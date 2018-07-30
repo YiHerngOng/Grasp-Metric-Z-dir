@@ -28,6 +28,7 @@ def getPointCloudFromMesh(filename, flag):
             kd_tree_list.append(points_array[i][4] /1000.0)
             kd_tree_list.append(points_array[i][5] /1000.0)
             kd_tree_list.append(points_array[i][6] /1000.0)
+            pdb.set_trace()
 
     if flag == 'hand':
         numpy.savetxt(filename + '.out', point_list, delimiter=',')

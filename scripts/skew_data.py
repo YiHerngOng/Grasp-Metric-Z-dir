@@ -154,20 +154,26 @@ def sampling_sweep_area_2(robot_vert):
 
 #######################################
 # Find object points within the threshold in terms of y coordinates
-def threshold_(robot_vert, object_verts, obj):
+def threshold_(robot_vert, object_verts, object_norms, obj):
 	# localize robot vert
 	robot_vert_local = list(localize_vertices(robot_vert, obj)[0:3])
 	object_verts_local = []
-	for i in object_verts:
-		object_vert_local = list(localize_vertices(i, obj)[0:3])
+	object_norms_local = []
+	pts_within_world = []
+	for i in xrange(len(object_verts)):
+		object_vert_local = list(localize_vertices(object_verts[i], obj)[0:3])
 		object_verts_local.append(object_vert_local)
+	# pdb.set_trace()
 	# Now robot vert and object verts are localized, implement threshold
 	pts_within = []
+	norms_within = []
 	for i in xrange(len(object_verts_local)):
 		if abs(object_verts_local[i][1] - robot_vert_local[1]) < 0.001:
 			pts_within.append(object_verts_local[i])
+			norms_within.append(object_norms[i])
+			pts_within_world.append(object_verts[i])
 
-	return pts_within, robot_vert_local, object_verts_local
+	return pts_within, norms_within, robot_vert_local, object_verts_local, pts_within_world
 
 # localize vertices wrt object coordinate system
 def localize_vertices(robot_vert, obj):
@@ -189,12 +195,19 @@ def histogram_(robot_vert, object_verts, obj):
 	return dists, med, avg, min_dist, max_dist
 #########################################
 
-def wedge(robot_vert, object_verts):
+# Should run points within y range first (increase computation time)
+# alpha is the angle of the wedge you want
+def wedge(plane_normal, object_verts, object_norms, alpha, obj):
 	# define wedge, (z-0, x-1/3 width of finger)
-	return None
-
-
-
+	# alpha = np.pi / 6 # degree
+	threshold_angle = np.pi - alpha
+	inv_plane_normal = -plane_normal[:]
+	# pdb.set_trace()
+	pts_to_include = []
+	for i in xrange(len(object_verts)):
+		if np.dot(object_norms[i], inv_plane_normal) < 0:
+			pts_to_include.append(object_verts[i])
+	return pts_to_include
 
 def get_min_distance(robot_vert, object_verts):
 	temp = []
@@ -328,7 +341,7 @@ def point_sampler_plane_equation(p1, p2, p3, boundX, boundY):
 			pt = [x, y, z]
 			arr.append(pt)
 
-	return arr
+	return arr,normal
 
 # For the purpose of trasforming to the sdf frame
 def transform(point, TransformationMatrix):
@@ -354,7 +367,7 @@ if __name__ == '__main__':
 	env = openravepy.Environment()
 	robot = loadRobot(env)
 	obj = loadObject(env, 'SprayBottle')
-
+	# pdb.set_trace()
 	# Reposition object to be in front of the hand
 	object_move = [[1,0,0,-0.05], [0,1,0,-0.05], [0,0,1,0.1], [0,0,0,1]]
 	object_move = np.array(object_move)
@@ -366,16 +379,16 @@ if __name__ == '__main__':
 	# sort those vertices and norm into two arrays
 	object_verts, object_norms = sort_vert_norm(object_verts_norms)
 	object_verts = scaleandtransform_pts(object_verts, object_move)
-	object_norms = scaleandtransform_pts(object_norms, object_move)
+	# object_norms = scaleandtransform_pts(object_norms, object_move)
 	# rand_handpts_trans = TransformationMatrix(rand_handpts)
 
 	# Point Sampling Methpoints: Create a plane and sample points on it
 	# Finger 2-1
-	Tlocal = robot.GetLink('Finger2-1').GetTransform()
-	hand_bound = [(-0.10599, -0.06983), (-0.00664,0.00664), (0.104, 0.105)]	
-	p1 = np.array([-0.10388, -0.00512, 0.10421])
-	p2 = np.array([-0.08720, 0.00624, 0.10482])
-	p3 = np.array([-0.07039, -0.00015, 0.10564])
+	# Tlocal = robot.GetLink('Finger2-1').GetTransform()
+	# hand_bound = [(-0.10599, -0.06983), (-0.00664,0.00664), (0.104, 0.105)]	
+	# p1 = np.array([-0.10388, -0.00512, 0.10421])
+	# p2 = np.array([-0.08720, 0.00624, 0.10482])
+	# p3 = np.array([-0.07039, -0.00015, 0.10564])
 
 	# Handbase 
 	# Tlocal = robot.GetLink('handbase').GetTransform()
@@ -385,13 +398,13 @@ if __name__ == '__main__':
 	# p3 = np.array([0.01026, -0.01408, 0.09496])
 
 	# # Finger 2-2
-	# Tlocal = robot.GetLink('Finger2-2').GetTransform()
-	# hand_bound = [(-0.14415, -0.12006), (-0.00665,0.00818), (0.10559, 0.13514)]	
-	# p1 = np.array([-0.13808, 0.00077, 0.12782])
-	# p2 = np.array([-0.13049, -0.00337, 0.11878])
-	# p3 = np.array([-0.12533, 0.00669, 0.11263])
+	Tlocal = robot.GetLink('Finger2-2').GetTransform()
+	hand_bound = [(-0.14415, -0.12006), (-0.00665,0.00818), (0.10559, 0.13514)]	
+	p1 = np.array([-0.13808, 0.00077, 0.12782])
+	p2 = np.array([-0.13049, -0.00337, 0.11878])
+	p3 = np.array([-0.12533, 0.00669, 0.11263])
 
-	pts_on_plane = point_sampler_plane_equation(p1, p2, p3, hand_bound[0], hand_bound[1])
+	pts_on_plane, plane_normal = point_sampler_plane_equation(p1, p2, p3, hand_bound[0], hand_bound[1])
 	env.SetViewer('qtcoin')
 
 	# bounding_item = bounding_box(obj)
@@ -412,3 +425,7 @@ if __name__ == '__main__':
 	# print arr
 
 	# hist, med, avg, min_dist, max_dist = histogram_(pts_on_plane[0], object_verts, obj)
+
+	# threshold and wedge to choose points that face the hand only
+	pts_within, norms_within, robot_vert_local, object_verts_local, pts_within_world = threshold_(pts_on_plane[0], object_verts, object_norms, obj)
+	pts_to_include = wedge(plane_normal, pts_within_world, norms_within, np.pi/6, obj)
